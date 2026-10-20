@@ -1,0 +1,56 @@
+name: Rebuild website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild-website
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build the latest game source
+        env:
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: |
+          BASE_HREF="/${REPOSITORY_NAME}/"
+          if [[ "$REPOSITORY_NAME" == *.github.io ]]; then
+            BASE_HREF="/"
+          fi
+          flutter build web --release --base-href "$BASE_HREF"
+      - name: Save rebuilt website for GitHub Pages
+        run: |
+          mkdir -p docs
+          cp -a build/web/. docs/
+          touch docs/.nojekyll
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs
+          if ! git diff --cached --quiet; then
+            git commit -m "Rebuild website from latest game source"
+            git push
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wisdom-draft-website
+          path: build/web
