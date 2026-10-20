@@ -724,6 +724,7 @@ class _HomeScreenState extends State<HomeScreen>
   void _askQuestionForMove(Piece piece, int destRow, int destCol) {
     _playCaptureSound();
     final question = _withShuffledOptions(gesQuestions[_getNextQuestionIndex()]);
+    final countdown = ValueNotifier<int>(secondsPerQuestion);
     setState(() {
       isAskingQuestion = true;
       timeRemaining = secondsPerQuestion;
@@ -735,6 +736,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           timeRemaining -= 1;
         });
+        countdown.value = timeRemaining;
       } else {
         timer.cancel();
         if (mounted) {
@@ -749,43 +751,67 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       configuration: const FadeScaleTransitionConfiguration(),
       builder: (context) => AlertDialog(
-        title: Text('Wisdom Trial - ${question.category.name.toUpperCase()}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              question.text,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text('Time left: $timeRemaining seconds',
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 18),
-            ...List.generate(question.options.length, (index) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: Colors.brown.shade50,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _resolveMoveAnswer(
-                        piece, destRow, destCol, question, index);
-                  },
-                  child: Text(question.options[index]),
+        backgroundColor: backgroundColor,
+        title: Text(
+          'Wisdom Trial - ${question.category.name.toUpperCase()}',
+          style: const TextStyle(color: accentGold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                question.text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-              );
-            }),
-          ],
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<int>(
+                valueListenable: countdown,
+                builder: (context, seconds, _) => Text(
+                  'Time left: $seconds seconds',
+                  style: const TextStyle(
+                    color: accentGold,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              ...List.generate(question.options.length, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: Colors.brown.shade50,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _resolveMoveAnswer(
+                          piece, destRow, destCol, question, index);
+                    },
+                    child: Text(question.options[index]),
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     ).then((_) {
       _stopQuestionSound();
       _questionTimer?.cancel();
       _questionTimer = null;
+      countdown.dispose();
       if (mounted) {
         setState(() {
           isAskingQuestion = false;
@@ -1536,7 +1562,7 @@ class _HomeScreenState extends State<HomeScreen>
                 const Padding(
                   padding: EdgeInsets.only(bottom: 4),
                   child: Text(
-                    'Powered by TeamGrok',
+                    'Powered by LearnBridgeEdu',
                     style: TextStyle(fontSize: 10, color: Colors.white54),
                   ),
                 ),
@@ -2163,4 +2189,5 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 }
+
 
